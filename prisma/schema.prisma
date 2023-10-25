@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int           @id @default(autoincrement())
+  resoniteUserId String        @unique
+  authId         String        @unique
+  balance        Int           @default(0)
+  createdAt      DateTime      @default(now())
+  sent           Transaction[] @relation("Sent")
+  received       Transaction[] @relation("Received")
+  Game           Game[]
+}
+
+model Game {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique
+  createdAt      DateTime @default(now())
+  player         User?    @relation(fields: [userId], references: [id])
+  userId         Int?
+  zouOK          Int      @default(0)
+  zouNG          Int      @default(0)
+  gamestate      String   @default("waiting") // waiting, playing, finished
+  additionalInfo String?
+}
+
+model Transaction {
+  id         Int      @id @default(autoincrement())
+  sender     User     @relation("Sent", fields: [senderId], references: [id])
+  senderId   Int
+  receiver   User     @relation("Received", fields: [receiverId], references: [id])
+  receiverId Int
+  amount     Int
+  createdAt  DateTime @default(now())
+  memo       String?
+}
