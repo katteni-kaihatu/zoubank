@@ -16,7 +16,7 @@ jobs:
       id-token: write
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
+      IMAGE_NAME: ${{ github.repository }}-frontend
     steps:
       - name: checkout
         uses: actions/checkout@v2
