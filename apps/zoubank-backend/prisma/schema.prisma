@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  BOT
+  ADMIN
+}
+
+model User {
+  id             String   @id @default(cuid())
+  resoniteUserId String   @unique
+  role           UserRole @default(USER)
+
+  APITokenHash String?
+
+  balance Decimal @default(0.0)
+
+  branchName    String
+  accountNumber String
+
+  incomingTransfers Transaction[] @relation("IncomingTransfers")
+  outgoingTransfers Transaction[] @relation("OutgoingTransfers")
+
+  @@index([resoniteUserId])
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  amount    Decimal
+  createdAt DateTime @default(now())
+
+  senderUserId    String? @map("senderId")
+  sender          User?   @relation("OutgoingTransfers", fields: [senderUserId], references: [id])
+  recipientUserId String? @map("recipientId")
+  recipient       User?   @relation("IncomingTransfers", fields: [recipientUserId], references: [id])
+
+  externalData Json
+
+  @@index([senderUserId])
+  @@index([recipientUserId])
+}

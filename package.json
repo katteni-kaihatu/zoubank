@@ -1,0 +1,16 @@
+{
+  "name": "zoubank-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:backend": "pnpm --filter ./apps/zoubank-backend start:dev",
+    "dev:frontend": "pnpm --filter ./apps/zoubank-frontend dev",
+    "dev": "concurrently -n backend,frontend -c blue,green \"pnpm dev:backend\" \"pnpm dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

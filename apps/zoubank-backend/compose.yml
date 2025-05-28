@@ -1,0 +1,47 @@
+services:
+  db:
+    restart: always
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+      interval: 5s
+      retries: 20
+    ports:
+      - "5432:5432"
+  redis:
+    restart: always
+    image: redis:6-alpine
+    volumes:
+      - ./redis:/data
+    ports:
+      - "6379:6379"
+  frontend:
+    image: ghcr.io/katteni-kaihatu/zoubank-frontend:latest
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+  backend:
+    image: ghcr.io/katteni-kaihatu/zoubank-backend:latest
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - REDIS_URL=redis://redis:6379
+      - SESSION_SECRET=
+      - ADMIN_API_TOKEN=
+      - APP_AUDIENCE=http://zoubank.resonite.love
+    depends_on:
+      - db
+      - redis
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - ./grafana:/var/lib/grafana
+      - ./grafana-config:/etc/grafana
+      - ./victoriametrics-datasource:/var/lib/grafana/plugins/grafana-datasource
+      - ./provisioning:/etc/grafana/provisioning
