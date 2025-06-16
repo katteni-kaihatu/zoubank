@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: zoubank
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Session Storage
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # Backend Development Server
+  backend:
+    build:
+      context: ./apps/zoubank-backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./apps/zoubank-backend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/zoubank
+      REDIS_URL: redis://redis:6379
+      SESSION_SECRET: dev-session-secret-change-in-production
+      ADMIN_API_TOKEN: dev-admin-token-change-in-production
+      APP_AUDIENCE: http://localhost:3001
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: npm run start:dev
+
+  # Frontend Development Server
+  frontend:
+    build:
+      context: ./apps/zoubank-frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./apps/zoubank-frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: development
+    depends_on:
+      - backend
+    command: npm run dev
+
+volumes:
+  postgres_data:
+  redis_data:
