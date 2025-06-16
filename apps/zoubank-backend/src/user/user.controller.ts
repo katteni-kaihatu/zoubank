@@ -1,4 +1,4 @@
-import {Body, Controller, Get, HttpException, Logger, Param, Put, Session} from '@nestjs/common';
+import {Body, Controller, Get, HttpException, Logger, Param, Put, Query, Session} from '@nestjs/common';
 import {UserService} from "./user.service";
 import {User} from "@prisma/client";
 
@@ -16,6 +16,15 @@ export class UserController {
         }
 
         return this.userService.getUserById(session.user.id)
+    }
+
+    @Get("/search")
+    async searchUsers(@Query("q") query: string) {
+        if (!query || query.length < 2) {
+            return []
+        }
+
+        return this.userService.searchUsers(query)
     }
 
     @Put("/")

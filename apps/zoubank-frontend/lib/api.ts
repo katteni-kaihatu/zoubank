@@ -105,4 +105,18 @@ export class ApiClient {
             return null;
         }
     }
+
+    async searchUsers(query: string) {
+        try {
+            const result = await fetch(`/api/user/search?q=${encodeURIComponent(query)}`, {
+                credentials: "include",
+            });
+            if (!result.ok) {
+                return [];
+            }
+            return await result.json();
+        } catch (e) {
+            return [];
+        }
+    }
 }

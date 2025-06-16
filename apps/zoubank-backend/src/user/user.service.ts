@@ -177,4 +177,32 @@ export class UserService {
             data: data
         })
     }
+
+    async searchUsers(query: string) {
+        const users = await this.prismaService.user.findMany({
+            where: {
+                OR: [
+                    {
+                        resoniteUserId: {
+                            contains: query,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        accountNumber: {
+                            contains: query
+                        }
+                    }
+                ]
+            },
+            select: {
+                id: true,
+                resoniteUserId: true,
+                accountNumber: true,
+                branchName: true
+            },
+            take: 10
+        })
+        return users
+    }
 }

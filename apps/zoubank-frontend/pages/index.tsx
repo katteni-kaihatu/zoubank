@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import {
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -13,12 +14,21 @@ import {
 } from "@mui/material";
 import BankHeader from "@/components/BankHeader";
 import { useApplication } from "@/contexts/Application";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import TransactionList from "@/components/TransactionList";
 import { Zou } from "@/components/Zou";
+import { useApi } from "@/contexts/Api";
+
+interface UserOption {
+  id: string;
+  resoniteUserId: string;
+  accountNumber: string;
+  branchName: string;
+}
 
 function IndexPage() {
   const app = useApplication();
+  const api = useApi();
 
   useEffect(() => {
     console.log(app.appReady, app.loggedIn);
@@ -30,6 +40,43 @@ function IndexPage() {
   const [sendTo, setSendTo] = useState<string>("");
   const [amount, setAmount] = useState<number>(0);
   const [memo, setMemo] = useState<string>();
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const searchUsers = useCallback(
+    async (query: string) => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+
+      searchTimeoutRef.current = setTimeout(async () => {
+        if (query.length < 2) {
+          setUserOptions([]);
+          return;
+        }
+        setIsSearching(true);
+        try {
+          const results = await api.searchUsers(query);
+          setUserOptions(results || []);
+        } catch (error) {
+          console.error("Failed to search users:", error);
+          setUserOptions([]);
+        } finally {
+          setIsSearching(false);
+        }
+      }, 300);
+    },
+    [api]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!app.appReady || !app.loggedIn) return <></>;
 
@@ -63,12 +110,47 @@ function IndexPage() {
               <CardHeader title="送金" />
               <CardContent>
                 <Box display="flex" flexDirection="column" gap={1}>
-                  <TextField
-                    label="送金先(UserID U-...)"
-                    fullWidth
-                    size="small"
+                  <Autocomplete
                     value={sendTo}
-                    onChange={(e) => setSendTo(e.target.value)}
+                    onChange={(event, newValue) => {
+                      setSendTo(newValue || "");
+                    }}
+                    inputValue={sendTo}
+                    onInputChange={(event, newInputValue, reason) => {
+                      if (reason === "input") {
+                        setSendTo(newInputValue);
+                        searchUsers(newInputValue);
+                      }
+                    }}
+                    options={userOptions.map((user) => user.resoniteUserId)}
+                    loading={isSearching}
+                    loadingText="検索中..."
+                    noOptionsText="ユーザーが見つかりません"
+                    renderOption={(props, option) => {
+                      const user = userOptions.find((u) => u.resoniteUserId === option);
+                      return (
+                        <li {...props}>
+                          <Box>
+                            <Typography variant="body1">{option}</Typography>
+                            {user && (
+                              <Typography variant="caption" color="text.secondary">
+                                {user.branchName} {user.accountNumber}
+                              </Typography>
+                            )}
+                          </Box>
+                        </li>
+                      );
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="送金先 (ユーザー名 または UserID)"
+                        size="small"
+                        fullWidth
+                        helperText="ユーザー名の一部または口座番号で検索できます"
+                      />
+                    )}
+                    freeSolo
                   />
                   <TextField
                     label="金額"
